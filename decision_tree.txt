@@ -1,0 +1,97 @@
+import pandas as pd
+import math
+
+def calculate_entropy(D):
+    t_column = D.iloc[:, -1] 
+    total_rows = len(t_column)
+    
+    entropy= 0
+    for count in t_column.value_counts():
+        p_i = count / total_rows
+        entropy -= p_i * math.log2(p_i)
+        
+    return entropy
+
+def information_gain(D, att_A):
+    entropy= calculate_entropy(D) 
+    entropy_A_D = 0 
+    total_rows_D = len(D)
+    
+    for v in D[att_A].unique():
+        subset_Dj = D[D[att_A] == v]
+        rows_Dj = len(subset_Dj)
+        
+        weight = rows_Dj / total_rows_D
+        entropy_Dj = calculate_entropy(subset_Dj)
+        entropy_A_D += weight * entropy_Dj  
+        
+    gain_A = entropy- entropy_A_D
+    return gain_A
+
+def calculate_gini(D):
+    t_column = D.iloc[:, -1]
+    total_rows = len(t_column)
+    
+    gini_D = 1.0
+    for count in t_column.value_counts():
+        p_i = count / total_rows
+        gini_D -= (p_i ** 2)
+        
+    return gini_D
+
+def gini_split_impurity(D, att_A):
+    total_rows_D = len(D)
+    gini_A_D = 0
+    
+    for v in D[att_A].unique():
+        subset_Dj = D[D[att_A] == v]
+        rows_Dj = len(subset_Dj)
+        
+        weight = rows_Dj / total_rows_D
+        gini_Dj = calculate_gini(subset_Dj)
+        gini_A_D += weight * gini_Dj
+        
+    return gini_A_D
+
+def build_decision_tree(D, attributes, criterion="entropy"):
+    t    _column = D.columns[-1]
+    
+    if len(D[target_column].unique()) == 1:
+        return D[target_column].iloc[0]
+        
+    if len(attributes) == 0:
+        return D[target_column].mode()[0]
+    
+    best_attribute = attributes[0]
+    
+    if criterion == "entropy":
+        max_gain = -1
+        for attr in attributes:
+            current_gain = information_gain(D, attr)
+            if current_gain > max_gain:
+                max_gain = current_gain
+                best_attribute = attr
+                
+    elif criterion == "gini":
+        min_impurity = float('inf') 
+        for attr in attributes:
+            current_impurity = gini_split_impurity(D, attr)
+            if current_impurity < min_impurity:
+                min_impurity = current_impurity
+                best_attribute = attr
+            
+    tree = {best_attribute: {}}
+    remaining_attributes = [a for a in attributes if a != best_attribute]
+    
+    for v in D[best_attribute].unique():
+        subset_Dj = D[D[best_attribute] == v]
+        
+        if subset_Dj.empty:
+            tree[best_attribute][v] = D[target_column].mode()[0]
+        else:
+            tree[best_attribute][v] = build_decision_tree(subset_Dj, remaining_attributes, criterion)
+            
+    return tree
+
+df=pd.read_excel("AllElectronics_Dataset.xlsx ")
+build_decision_tree
